@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Upload de Mídia</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .media-list {
+            margin-top: 30px;
+        }
+        .media-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .media-item img {
+            max-width: 100%;
+            max-height: 200px;
+        }
+        .media-item audio {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Upload de Mídia</h1>
+    
+    <form id="uploadForm">
+        <div>
+            <label for="usuarioId">ID do Usuário:</label>
+            <input type="number" id="usuarioId" required>
+        </div>
+        <div>
+            <label for="file">Selecione um arquivo (imagem ou áudio):</label>
+            <input type="file" id="file" name="file" accept="image/*,audio/*" required>
+        </div>
+        <button type="submit">Enviar</button>
+    </form>
+
+    <h2>Mídias do Usuário</h2>
+    <div>
+        <label for="usuarioIdBusca">ID do Usuário para buscar mídias:</label>
+        <input type="number" id="usuarioIdBusca">
+        <button id="buscarBtn">Buscar Mídias</button>
+    </div>
+    
+    <div class="media-list" id="mediaList"></div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usuarioId = document.getElementById('usuarioId').value;
+            const fileInput = document.getElementById('file');
+            
+            if (!usuarioId || !fileInput.files[0]) {
+                alert('Por favor, preencha todos os campos');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch(`http://localhost:3000/usuarios/${usuarioId}/media`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                alert('Arquivo enviado com sucesso!');
+                document.getElementById('uploadForm').reset();
+                
+                // Atualizar a lista de mídias
+                if (document.getElementById('usuarioIdBusca').value === usuarioId) {
+                    buscarMedias(usuarioId);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao enviar arquivo:', error);
+                alert('Erro ao enviar arquivo. Verifique o console para mais detalhes.');
+            }
+        });
+        
+        document.getElementById('buscarBtn').addEventListener('click', () => {
+            const usuarioId = document.getElementById('usuarioIdBusca').value;
+            if (usuarioId) {
+                buscarMedias(usuarioId);
+            } else {
+                alert('Por favor, informe o ID do usuário');
+            }
+        });
+        
+        async function buscarMedias(usuarioId) {
+            try {
+                const response = await fetch(`http://localhost:3000/usuarios/${usuarioId}/media`);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro: ${response.status}`);
+                }
+                
+                const medias = await response.json();
+                exibirMedias(medias);
+                
+            } catch (error) {
+                console.error('Erro ao buscar mídias:', error);
+                alert('Erro ao buscar mídias. Verifique o console para mais detalhes.');
+            }
+        }
+        
+        function exibirMedias(medias) {
+            const mediaList = document.getElementById('mediaList');
+            mediaList.innerHTML = '';
+            
+            if (medias.length === 0) {
+                mediaList.innerHTML = '<p>Nenhuma mídia encontrada para este usuário.</p>';
+                return;
+            }
+            
+            medias.forEach(media => {
+                const mediaItem = document.createElement('div');
+                mediaItem.className = 'media-item';
+                
+                const mediaInfo = document.createElement('p');
+                mediaInfo.textContent = `Nome: ${media.originalname} | Tipo: ${media.type} | Tamanho: ${formatFileSize(media.size)}`;
+                
+                mediaItem.appendChild(mediaInfo);
+                
+                // Exibir o conteúdo da mídia
+                if (media.type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = `http://localhost:3000/uploads/${media.filename}`;
+                    img.alt = media.originalname;
+                    mediaItem.appendChild(img);
+                } else if (media.type === 'audio') {
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = `http://localhost:3000/uploads/${media.filename}`;
+                    mediaItem.appendChild(audio);
+                }
+                
+                // Botão para excluir
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Excluir';
+                deleteBtn.style.backgroundColor = '#f44336';
+                deleteBtn.style.marginTop = '10px';
+                deleteBtn.addEventListener('click', () => excluirMedia(media.id, media.usuarioId));
+                
+                mediaItem.appendChild(deleteBtn);
+                mediaList.appendChild(mediaItem);
+            });
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            else return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+        
+        async function excluirMedia(mediaId, usuarioId) {
+            if (!confirm('Tem certeza que deseja excluir esta mídia?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:3000/usuarios/media/${mediaId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro: ${response.status}`);
+                }
+                
+                alert('Mídia excluída com sucesso!');
+                buscarMedias(usuarioId);
+                
+            } catch (error) {
+                console.error('Erro ao excluir mídia:', error);
+                alert('Erro ao excluir mídia. Verifique o console para mais detalhes.');
+            }
+        }
+    </script>
+</body>
+</html>
