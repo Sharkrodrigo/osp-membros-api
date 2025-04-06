@@ -7,16 +7,12 @@ import { StaticModule } from './static/static.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: '12345',
-      database: 'OhOsPapo',
+      url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true,
     }),
-    UsuarioModule, // <-- IMPORTANTE
-    StaticModule, // <-- Módulo para servir arquivos estáticos
+    UsuarioModule,
+    StaticModule,
   ],
 })
 export class AppModule {}
