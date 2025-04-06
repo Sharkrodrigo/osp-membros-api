@@ -11,8 +11,8 @@ import { StaticModule } from './static/static.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
-    UsuarioModule, // <-- IMPORTANTE
-    StaticModule, // <-- Módulo para servir arquivos estáticos
+    UsuarioModule,
+    StaticModule,
   ],
 })
 export class AppModule {}
