@@ -15,4 +15,5 @@ import { StaticModule } from './static/static.module';
     StaticModule,
   ],
 })
-export class AppModule {}
+export class AppModule {
+}
